@@ -3,16 +3,86 @@
 let effective_permissions = define_new_effective_permissions("effect_panel", add_info_col = true, which_permissions = null);
 $('#sidepanel').append(effective_permissions);
 
+// --- lightweight styles for allowed/denied rows
+$('head').append(`
+  <style>
+    .ep-allowed { background: #eef9f0; }  /* subtle green  */
+    .ep-denied  { background: #fdf0f0; }  /* subtle red    */
+  </style>
+`);
+
+// ----- EP (Effective Permissions) helpers: chips + colors + summary -----
+function ep_getState(){
+  return {
+    user: $('#effect_panel').attr('username'),
+    file: $('#effect_panel').attr('filepath')
+  };
+}
+
+function ep_renderContext(){
+  const { user, file } = ep_getState();
+  const html = `
+    <div id="ep_ctx" style="display:flex;gap:8px;margin:6px 0 4px 0">
+      <span class="ui-state-active" style="padding:2px 8px;border-radius:12px">User: ${user || '—'}</span>
+      <span class="ui-state-active" style="padding:2px 8px;border-radius:12px;max-width:60ch;overflow:hidden;text-overflow:ellipsis">File: ${file || '—'}</span>
+    </div>`;
+  const panel = $('#effect_panel');
+  panel.find('#ep_ctx').remove();
+  panel.prepend(html);
+}
+
+function ep_colorizeRows(){
+  const { user, file } = ep_getState();
+  if(!user || !file) return;
+  $('#effect_panel tr[id^="effect_panel_row_"]').each(function(){
+    const perm = $(this).attr('permission_name');
+    const allowed = allow_user_action(path_to_file[file], all_users[user], perm);
+    $(this).toggleClass('ep-allowed', !!allowed)
+           .toggleClass('ep-denied', !allowed);
+  });
+}
+
+function ep_renderSummary(){
+  const { user, file } = ep_getState();
+  if(!user || !file) return;
+  let total = 0, allowed = 0;
+  $('#effect_panel tr[id^="effect_panel_row_"]').each(function(){
+    total++;
+    const perm = $(this).attr('permission_name');
+    if(allow_user_action(path_to_file[file], all_users[user], perm)) allowed++;
+  });
+  const html = `
+  <div id="ep_summary" class="ui-widget ui-widget-content" style="padding:6px 8px;margin:4px 0;font-size:14px">
+    <strong>Verify user permissions below.</strong>
+  </div>`;
+
+  const panel = $('#effect_panel');
+  panel.find('#ep_summary').remove();
+  panel.prepend(html);
+}
+
+function ep_updateUI(){
+  ep_renderContext();
+  ep_colorizeRows();
+  ep_renderSummary();
+}
+
 const $userSelect = define_new_user_select_field('user_select', 'Select User', function(selected_user) {
   $('#effect_panel').attr('username', selected_user);
+  ep_updateUI();            // <— triggers chips/colors/summary
 });
+
 $('#sidepanel').append($userSelect);
 
 
 $('#effect_panel').attr('filepath', '/C/presentation_documents/important_file.txt');
+$('#effect_panel').attr('username', 'administrator');
+ep_updateUI();
 
 
+   
 let info_dialog = define_new_dialog('info_dialog', 'Permission Explanation', { width: 400, height: 250 });
+
 
 
 $('.perm_info').click(function() {
@@ -92,7 +162,9 @@ $('.permbutton').click( function( e ) {
     perm_dialog.attr('filepath', path)
     perm_dialog.dialog('open')
     //open_permissions_dialog(path)
-
+// NEW: also sync the Effective Permissions panel on the right
+    $('#effect_panel').attr('filepath', path);
+    ep_updateUI();
     // Deal with the fact that folders try to collapse/expand when you click on their permissions button:
     e.stopPropagation() // don't propagate button click to element underneath it (e.g. folder accordion)
     // Emit a click for logging purposes:
