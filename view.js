@@ -279,3 +279,67 @@ $('head').append(`
     }
   </style>
 `);
+
+// ---------- Hover tooltip for the "Select User" button (consistent with lock icon tooltips) ----------
+
+// Give the button a title attribute (optional, for accessibility)
+$('#user_select_button').attr('aria-label', 'Select a user');
+$('#user_select_button').attr('title', 'Click to change which user’s permissions are shown and can be modified.');
+
+// Add to the same jQuery UI tooltip system as other items
+$(document).tooltip({
+  items: '.permbutton, .perm_info, #user_select_button',
+  track: true,
+  show: { delay: 200 },
+  hide: { delay: 120 },
+  position: { my: 'left+12 center', at: 'right center' },
+  content: function (callback) {
+    const $t = $(this);
+
+    // Reuse existing logic for permission buttons
+    if ($t.hasClass('permbutton')) {
+      const path = $t.attr('path');
+      const user = $('#effect_panel').attr('username') || '—';
+      if (path && path in path_to_file) {
+        const f = path_to_file[path];
+        const kind = f.is_folder ? 'folder' : 'file';
+        return callback(`
+          <div>
+            <strong>${kind}:</strong> ${f.filename}<br>
+            <em>Click</em> to open permissions editor.<br>
+            <small>Current user: ${user}</small>
+          </div>
+        `);
+      }
+      return callback('Open permissions');
+    }
+
+    // Reuse existing logic for info icons
+    if ($t.hasClass('perm_info')) {
+      const permission = $t.attr('permission_name');
+      const username = $('#effect_panel').attr('username');
+      const filepath = $('#effect_panel').attr('filepath');
+      if (permission && username && filepath &&
+          (username in all_users) && (filepath in path_to_file)) {
+        const expl = allow_user_action(path_to_file[filepath], all_users[username], permission, true);
+        const html = get_explanation_text(expl).replace(/\n\s*/g, '<br>').replace('?:', ':');
+        return callback(html);
+      }
+      return callback('Select a user and file to see details.');
+    }
+
+    // ✨ New: tooltip for "Select User" button
+    if ($t.is('#user_select_button')) {
+      return callback(`
+        <div>
+          <strong>Select User:</strong><br>
+          Click this button to change which user’s permissions are displayed and can be modified below.
+        </div>
+      `);
+    }
+
+    // fallback for any other title attributes
+    return callback($t.attr('title') || '');
+  }
+});
+
