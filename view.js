@@ -174,3 +174,108 @@ $('.permbutton').click( function( e ) {
 
 // ---- Assign unique ids to everything that doesn't have an ID ----
 $('#html-loc').find('*').uniqueId() 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ---------- Hover pop-ups (tooltips) for lock buttons and info chips ----------
+
+// (Optional) a tiny helper: escape HTML & format the multi-line explanation into <br> lines.
+function ep_escape_html(str){
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+function ep_format_explanation_html(expl){
+  // get_explanation_text returns a multi-line string; convert safely to simple HTML
+  const raw = get_explanation_text(expl);
+  return ep_escape_html(raw).replace(/\n\s*/g, '<br>');
+}
+
+// Give permbuttons accessible labels (helps keyboard/screen readers)
+$('.permbutton').each(function(){
+  const path = $(this).attr('path');
+  if (path && path in path_to_file){
+    const f = path_to_file[path];
+    const kind = f.is_folder ? 'folder' : 'file';
+    $(this).attr('aria-label', `Open permissions for ${kind} "${f.filename}"`);
+  } else {
+    $(this).attr('aria-label', 'Open permissions');
+  }
+});
+
+// Initialize a single delegated tooltip for both targets.
+// jQuery UI tooltip re-queries `content` each time it opens, so it stays up-to-date
+// as the selected user/file changes.
+$(document).tooltip({
+  items: '.permbutton, .perm_info',
+  track: true,
+  show: { delay: 200 },
+  hide: { delay: 120 },
+  position: { my: 'left+12 center', at: 'right center' },
+  content: function(callback){
+    const $t = $(this);
+
+    // 1) Lock buttons in the file tree
+    if ($t.hasClass('permbutton')) {
+      const path = $t.attr('path');
+      const user = $('#effect_panel').attr('username') || '—';
+      if (path && path in path_to_file){
+        const f = path_to_file[path];
+        const kind = f.is_folder ? 'Folder' : 'File';
+        const html = `
+          <div>
+            <strong>${kind}:</strong> ${ep_escape_html(f.filename)}<br>
+            <em>Click</em> to open permissions editor.<br>
+            <small>Current user: ${ep_escape_html(user)}</small>
+          </div>`;
+        return callback(html);
+      }
+      return callback('Open permissions');
+
+    // 2) Info icons in the Effective Permissions panel
+    } else if ($t.hasClass('perm_info')) {
+      const permission = $t.attr('permission_name');
+      const username   = $('#effect_panel').attr('username');
+      const filepath   = $('#effect_panel').attr('filepath');
+
+      if (permission && username && filepath &&
+          (username in all_users) && (filepath in path_to_file)) {
+
+        const expl = allow_user_action(path_to_file[filepath], all_users[username], permission, true);
+        // Clean up any odd punctuation and format lines
+        const html = ep_format_explanation_html(expl).replace('?:', ':');
+        return callback(html);
+      }
+      return callback('Select a user and file to see details.');
+    }
+
+    // Fallback to any native title attr
+    return callback($t.attr('title') || '');
+  }
+});
+
+// Optional: style tweaks for nicer tooltip width
+$('head').append(`
+  <style>
+    .ui-tooltip {
+      max-width: 36rem;
+      line-height: 1.25;
+      font-size: 0.95rem;
+      white-space: normal;
+    }
+  </style>
+`);
