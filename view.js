@@ -67,6 +67,102 @@ function ep_updateUI(){
   ep_renderSummary();
 }
 
+// Disable inherited permission checkboxes in the dialog
+function disableInheritedPermissions() {
+  const filepath = $('#permdialog').attr('filepath');
+  const username = $('#permdialog_grouped_permissions').attr('username');
+  
+  if (!filepath || !(filepath in path_to_file)) return;
+  if (!username || !(username in all_users)) return;
+  
+  const fileObj = path_to_file[filepath];
+  
+  // If file uses inheritance and has a parent
+  if (fileObj.using_permission_inheritance && fileObj.parent !== null) {
+    
+    // Disable all checkboxes in the grouped permissions table
+    $('#permdialog_grouped_permissions .groupcheckbox').each(function() {
+      $(this).prop('disabled', true).css({
+        'opacity': '0.5',
+        'cursor': 'not-allowed'
+      });
+    });
+    
+    // Gray out all permission rows
+    $('#permdialog_grouped_permissions tr[id*="_row_"]').css({
+      'opacity': '0.7',
+      'background-color': '#f5f5f5'
+    });
+    
+    // Disable Add/Remove user buttons
+    $('#perm_add_user_button, #perm_remove_user').prop('disabled', true).css('opacity', '0.5');
+    
+  } else {
+    // Re-enable everything if not inherited
+    $('#permdialog_grouped_permissions .groupcheckbox').prop('disabled', false).css({
+      'opacity': '1',
+      'cursor': 'pointer'
+    });
+    
+    $('#permdialog_grouped_permissions tr[id*="_row_"]').css({
+      'opacity': '1',
+      'background-color': ''
+    });
+    
+    $('#perm_add_user_button, #perm_remove_user').prop('disabled', false).css('opacity', '1');
+  }
+}
+
+$(document).on('selectableselected', '#permdialog_file_user_list', function() {
+    setTimeout(function() {
+        syncInheritedPermissions();
+        disableInheritedPermissions();
+    }, 50);
+});
+
+// NEW: Update checkbox states to match parent when file uses inheritance
+function syncInheritedPermissions() {
+  const filepath = $('#permdialog').attr('filepath');
+  const username = $('#permdialog_grouped_permissions').attr('username');
+  
+  if (!filepath || !(filepath in path_to_file)) return;
+  if (!username || !(username in all_users)) return;
+  
+  const fileObj = path_to_file[filepath];
+  
+  // If file uses inheritance and has a parent
+  if (fileObj.using_permission_inheritance && fileObj.parent !== null) {
+    const parentObj = fileObj.parent;
+    
+    // For each permission group row, check parent's permissions and update checkboxes
+    $('#permdialog_grouped_permissions tr[id*="_row_"]').each(function() {
+      const rowId = $(this).attr('id');
+      const groupName = rowId.replace('permdialog_grouped_permissions_row_', '');
+      
+      if (groupName === 'Special_permissions') return; // Skip special permissions
+      
+      const permissionsList = permission_groups[groupName];
+      if (!permissionsList) return;
+      
+      // Check if ALL permissions in this group are allowed by parent
+      let allAllowed = true;
+      for (let perm of permissionsList) {
+        if (!allow_user_action(parentObj, username, perm)) {
+          allAllowed = false;
+          break;
+        }
+      }
+      
+      // Update the checkboxes to match parent
+      const allowCheckbox = $(`#permdialog_grouped_permissions_${groupName}_allow_checkbox`);
+      const denyCheckbox = $(`#permdialog_grouped_permissions_${groupName}_deny_checkbox`);
+      
+      allowCheckbox.prop('checked', allAllowed);
+      denyCheckbox.prop('checked', false);
+    });
+  }
+}
+
 const $userSelect = define_new_user_select_field('user_select', 'Select User', function(selected_user) {
   $('#effect_panel').attr('username', selected_user);
   ep_updateUI();            // <— triggers chips/colors/summary
@@ -144,6 +240,44 @@ for(let root_file of root_files) {
     $( "#filestructure" ).append( file_elem);    
 }
 
+// Disable permission buttons for files using inheritance
+function updatePermButtonStates() {
+  $('.permbutton').each(function() {
+    const path = $(this).attr('path');
+    if (path && path in path_to_file) {
+      const fileObj = path_to_file[path];
+      
+      // Check if file uses inheritance and has a parent
+      if (fileObj.using_permission_inheritance && fileObj.parent !== null) {
+        // Gray out and disable the button
+        $(this).prop('disabled', true)
+               .css({
+                 'opacity': '0.5',
+                 'cursor': 'not-allowed',
+                 'pointer-events': 'none'
+               });
+        
+        // Update the icon to show it's locked/inherited
+        $(this).find('span.oi').removeClass('oi-lock-unlocked')
+                               .addClass('oi-lock-locked');
+      } else {
+        // Enable the button (in case it was previously disabled)
+        $(this).prop('disabled', false)
+               .css({
+                 'opacity': '1',
+                 'cursor': 'pointer',
+                 'pointer-events': 'auto'
+               });
+        
+        $(this).find('span.oi').removeClass('oi-lock-locked')
+                               .addClass('oi-lock-unlocked');
+      }
+    }
+  });
+}
+
+// Call this after creating the file structure
+updatePermButtonStates();
 
 
 // make folder hierarchy into an accordion structure
@@ -157,20 +291,22 @@ $('.folder').accordion({
 
 // open permissions dialog when a permission button is clicked
 $('.permbutton').click( function( e ) {
-    // Set the path and open dialog:
     let path = e.currentTarget.getAttribute('path');
     perm_dialog.attr('filepath', path)
     perm_dialog.dialog('open')
-    //open_permissions_dialog(path)
-// NEW: also sync the Effective Permissions panel on the right
+    
     $('#effect_panel').attr('filepath', path);
     ep_updateUI();
-    // Deal with the fact that folders try to collapse/expand when you click on their permissions button:
-    e.stopPropagation() // don't propagate button click to element underneath it (e.g. folder accordion)
-    // Emit a click for logging purposes:
+    
+    // NEW: Sync checkboxes with parent, then disable them
+    setTimeout(function() {
+        syncInheritedPermissions();
+        disableInheritedPermissions();
+    }, 100);
+    
+    e.stopPropagation()
     emitter.dispatchEvent(new CustomEvent('userEvent', { detail: new ClickEntry(ActionEnum.CLICK, (e.clientX + window.pageXOffset), (e.clientY + window.pageYOffset), e.target.id,new Date().getTime()) }))
 });
-
 
 // ---- Assign unique ids to everything that doesn't have an ID ----
 $('#html-loc').find('*').uniqueId() 
