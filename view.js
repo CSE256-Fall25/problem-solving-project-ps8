@@ -1,14 +1,12 @@
 // ---- Define your dialogs  and panels here ----
 
-let effective_permissions = define_new_effective_permissions("effect_panel", add_info_col = true, which_permissions = null);
-$('#sidepanel').append(effective_permissions);
+// let effective_permissions = define_new_effective_permissions("effect_panel", add_info_col = true, which_permissions = null);
+// $('#sidepanel').append(effective_permissions);
 
-const $userSelect = define_new_user_select_field('user_select', 'Select User to View Permissions Settings', function(selected_user) {
-  $('#effect_panel').attr('username', selected_user);
-});
-$('#sidepanel').append($userSelect);
-
-
+// const $userSelect = define_new_user_select_field('user_select', 'Select User', function(selected_user) {
+//   $('#effect_panel').attr('username', selected_user);
+// });
+// $('#sidepanel').append($userSelect);
 
 
 $('#effect_panel').attr('filepath', '/C/presentation_documents/important_file.txt');
@@ -103,4 +101,4 @@ $('.permbutton').click( function( e ) {
 
 
 // ---- Assign unique ids to everything that doesn't have an ID ----
-$('#html-loc').find('*').uniqueId() 
+$('#html-loc').find('*').uniqueId()
