@@ -234,7 +234,7 @@ perm_dialog.append(perm_add_user_select)
 
 perm_add_user_select.append(perm_remove_user_button) // Cheating a bit again - add the remove button the the 'add user select' div, just so it shows up on the same line.
 
-perm_add_user_select.append(perm_undo_button) // Add undo button on same line
+// perm_add_user_select.append(perm_undo_button) // Add undo button on same line
 
 
 //eliana
