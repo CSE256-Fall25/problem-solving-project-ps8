@@ -36,3 +36,74 @@
 .no-close .ui-dialog-titlebar-close {
     display: none;
 }
+
+/* ---- Permission slider (Allow / Deny) ---- */
+
+.perm-toggle-cell {
+    padding: 4px 0;
+}
+
+.perm-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 999px;
+    border: 1px solid #ccc;
+    overflow: hidden;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+    min-width: 90px;
+}
+
+.perm-toggle-segment {
+    flex: 1;
+    text-align: center;
+    padding: 4px 6px;
+    box-sizing: border-box;
+}
+
+/* When neither allow nor deny is set, show deny visually (UI only) */
+
+.perm-toggle--none .perm-toggle-segment-deny {
+    background: #f8d0d0 !important;   /* light red */
+    color: #a11 !important;
+    font-weight: 600 !important;
+}
+
+.perm-toggle--none .perm-toggle-segment-allow {
+    background: #f3f3f3 !important;
+    color: #555 !important;
+}
+
+/* Active Deny (red) */
+.perm-toggle--deny .perm-toggle-segment-deny {
+    background: #f8d0d0;
+    color: #a11;
+    font-weight: 600;
+}
+
+.perm-toggle--deny .perm-toggle-segment-allow {
+    background: #f3f3f3;
+    color: #555;
+}
+
+/* Active Allow (green) */
+.perm-toggle--allow .perm-toggle-segment-allow {
+    background: #c7f3d0;
+    color: #175b2a;
+    font-weight: 600;
+}
+
+.perm-toggle--allow .perm-toggle-segment-deny {
+    background: #f3f3f3;
+    color: #555;
+}
+
+/* Hide underlying checkboxes *inside* the toggle UI;
+   logic still uses them, we just don't show them. */
+.perm-toggle input[ptype="allow"],
+.perm-toggle input[ptype="deny"] {
+    display: none;
+}

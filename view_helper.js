@@ -211,13 +211,18 @@ function define_grouped_permission_checkboxes(id_prefix, which_groups = null) {
     let group_table = $(`
     <table id="${id_prefix}" class="ui-widget-content" width="100%">
         <tr id="${id_prefix}_header">
-            <th id="${id_prefix}_header_p" width="99%">Permissions for <span id="${id_prefix}_header_username"></span>
+            <th id="${id_prefix}_header_p" width="99%">Permissions for: <span id="${id_prefix}_header_username"></span>
             </th>
-            <th id="${id_prefix}_header_allow">Allow</th>
-            <th id="${id_prefix}_header_deny">Deny</th>
+            <th id="${id_prefix}_header_allow"></th>
+            <th id="${id_prefix}_header_deny"></th>
         </tr>
     </table>
     `)
+
+
+    
+
+    
 
     if(which_groups === null) {
         which_groups = perm_groupnames
@@ -275,7 +280,7 @@ function define_grouped_permission_checkboxes(id_prefix, which_groups = null) {
             // can't get permissions for this username/filepath - reset everything into a blank state
             group_table.find('.groupcheckbox').prop('disabled', true)
             group_table.find('.groupcheckbox').prop('checked', false)
-            $(`#${id_prefix}_header_username`).text('')
+            $(`#${id_prefix}_header_username`).text('[PLEASE SELECT A USER]')
         }
 
     }
@@ -291,16 +296,16 @@ function define_grouped_permission_checkboxes(id_prefix, which_groups = null) {
     return group_table
 }
 
-// define an element which will display *individual* permissions for a given file and user, and allow for changing them by checking/unchecking the checkboxes.
+// define an element which will display *individual* permissions for a given file and user,
+// and allow for changing them via a 2-state Allow/Deny slider (backed by the original checkboxes).
 function define_permission_checkboxes(id_prefix, which_permissions = null){
     // Set up table and header:
     let perm_table = $(`
     <table id="${id_prefix}" class="ui-widget-content" width="100%">
         <tr id="${id_prefix}_header">
-            <th id="${id_prefix}_header_p" width="99%">Permissions for <span id="${id_prefix}_header_username"></span>
+            <th id="${id_prefix}_header_p" width="60%">Permissions for <span id="${id_prefix}_header_username"></span>
             </th>
-            <th id="${id_prefix}_header_allow">Allow</th>
-            <th id="${id_prefix}_header_deny">Deny</th>
+            <th id="${id_prefix}_header_allow" colspan="2">Allow / Deny</th>
         </tr>
     </table>
     `)
@@ -315,16 +320,35 @@ function define_permission_checkboxes(id_prefix, which_permissions = null){
         let row = $(`<tr id="${id_prefix}_row_${p_id}">
             <td id="${id_prefix}_${p_id}_name">${p}</td>
         </tr>`)
-        // Add allow and deny checkboxes:
-        for(let ace_type of ['allow', 'deny']) {
-            row.append(`<td id="${id_prefix}_${p_id}_${ace_type}_cell">
-                <input type="checkbox" id="${id_prefix}_${p_id}_${ace_type}_checkbox" ptype="${ace_type}" class="perm_checkbox" permission="${p}" ></input>
-            </td>`)
-        }
+
+        // One combined cell for the slider + the underlying checkboxes
+        let toggleCell = $(`
+            <td id="${id_prefix}_${p_id}_toggle_cell" class="perm-toggle-cell" colspan="2">
+                <div class="perm-toggle perm-toggle--none" data-permission="${p}">
+                    <span class="perm-toggle-segment perm-toggle-segment-deny">Deny</span>
+                    <span class="perm-toggle-segment perm-toggle-segment-allow">Allow</span>
+
+                    <!-- underlying checkboxes; existing logic & logging still use these -->
+                    <input type="checkbox"
+                           id="${id_prefix}_${p_id}_allow_checkbox"
+                           ptype="allow"
+                           class="perm_checkbox perm_checkbox_allow"
+                           permission="${p}">
+                    <input type="checkbox"
+                           id="${id_prefix}_${p_id}_deny_checkbox"
+                           ptype="deny"
+                           class="perm_checkbox perm_checkbox_deny"
+                           permission="${p}">
+                </div>
+            </td>
+        `)
+
+        row.append(toggleCell)
         perm_table.append(row)
     }
 
-    perm_table.find('.perm_checkbox').prop('disabled', true)// disable all checkboxes to start
+    // disable all checkboxes to start (same behavior as original)
+    perm_table.find('.perm_checkbox').prop('disabled', true)
 
     let update_perm_table = function(){
 
@@ -342,7 +366,8 @@ function define_permission_checkboxes(id_prefix, which_permissions = null){
             //change name on table:
             $(`#${id_prefix}_header_username`).text(username)
 
-            // Get permissions:
+
+            // Get permissions (this is the original model-driven logic)
             let all_perms = get_total_permissions(path_to_file[filepath], username)
             for( ace_type in all_perms) { // 'allow' and 'deny'
                 for(allowed_perm in all_perms[ace_type]) {
@@ -360,18 +385,80 @@ function define_permission_checkboxes(id_prefix, which_permissions = null){
             // can't get permissions for this username/filepath - reset everything into a blank state
             perm_table.find('.perm_checkbox').prop('disabled', true)
             perm_table.find('.perm_checkbox').prop('checked', false)
-            $(`#${id_prefix}_header_username`).text('')
+            $(`#${id_prefix}_header_username`).text('PLEASE SELECT A USER')
         }
+
+        // Sync slider visual state with the underlying checkboxes.
+        // This means: we only *display* allow/deny here; the model logic (including
+        // "none or both => deny") stays in the existing JS.
+        perm_table.find('.perm-toggle').each(function() {
+            const $toggle = $(this)
+            const $allow = $toggle.find('.perm_checkbox_allow')
+            const $deny  = $toggle.find('.perm_checkbox_deny')
+
+            const allowOn = $allow.prop('checked')
+            const denyOn  = $deny.prop('checked')
+
+            $toggle.removeClass('perm-toggle--allow perm-toggle--deny perm-toggle--none')
+
+            if (allowOn && !denyOn) {
+                $toggle.addClass('perm-toggle--allow')
+            } else if (denyOn && !allowOn) {
+                $toggle.addClass('perm-toggle--deny')
+            } else {
+                // model has neither or both (which your existing JS interprets as deny)
+                $toggle.addClass('perm-toggle--none')
+            }
+        })
     }
 
     define_attribute_observer(perm_table, 'username', update_perm_table)
     define_attribute_observer(perm_table, 'filepath', update_perm_table)
 
-    //Update permissions when checkbox is clicked:
+    // Existing behavior: whenever a checkbox changes, call toggle_permission and then refresh.
     perm_table.find('.perm_checkbox').change(function(){
         console.log(perm_table.attr('filepath'), perm_table.attr('username'), $(this).attr('permission'), $(this).attr('ptype'), $(this).prop('checked'))
         toggle_permission( perm_table.attr('filepath'), perm_table.attr('username'), $(this).attr('permission'), $(this).attr('ptype'), $(this).prop('checked'))
-        update_perm_table()// reload checkboxes
+        update_perm_table()// reload visual slider state
+    })
+
+    // NEW: clicking the slider segments sets the underlying checkboxes.
+    // This is the ONLY place the slider does anything; all real work still
+    // goes through the checkboxes + toggle_permission.
+    perm_table.on('click', '.perm-toggle-segment-deny', function() {
+        const $toggle = $(this).closest('.perm-toggle')
+        const $allow = $toggle.find('.perm_checkbox_allow:not([disabled])')
+        const $deny  = $toggle.find('.perm_checkbox_deny:not([disabled])')
+        if (!$allow.length || !$deny.length) return
+
+        const denyOn  = $deny.prop('checked')
+        const allowOn = $allow.prop('checked')
+
+        // We want clicking Deny to "win": Deny checked, Allow unchecked.
+        if (!denyOn) {
+            $deny.prop('checked', true).trigger('change')
+        }
+        if (allowOn) {
+            $allow.prop('checked', false).trigger('change')
+        }
+    })
+
+    perm_table.on('click', '.perm-toggle-segment-allow', function() {
+        const $toggle = $(this).closest('.perm-toggle')
+        const $allow = $toggle.find('.perm_checkbox_allow:not([disabled])')
+        const $deny  = $toggle.find('.perm_checkbox_deny:not([disabled])')
+        if (!$allow.length || !$deny.length) return
+
+        const denyOn  = $deny.prop('checked')
+        const allowOn = $allow.prop('checked')
+
+        // Clicking Allow: Allow checked, Deny unchecked.
+        if (!allowOn) {
+            $allow.prop('checked', true).trigger('change')
+        }
+        if (denyOn) {
+            $deny.prop('checked', false).trigger('change')
+        }
     })
 
     return perm_table
@@ -521,3 +608,121 @@ $('#filestructure').css({
     'vertical-align': 'top'
 })
 $('#filestructure').after('<div id="sidepanel" style="display:inline-block;width:49%"></div>')
+
+
+// ---- Permission Allow/Deny slider UI (non-invasive wrapper around existing checkboxes) ----
+
+// Turn any table with Allow/Deny columns into slider toggles
+function init_permission_sliders() {
+
+    $('table').each(function () {
+        const $table = $(this);
+
+        // Only act on tables that have Allow / Deny headers
+        const hasAllow =
+            $table.find('th[id$="_header_allow"], #perm_entry_header_allow').length > 0;
+        const hasDeny =
+            $table.find('th[id$="_header_deny"], #perm_entry_header_deny').length > 0;
+
+        if (!hasAllow || !hasDeny) return;
+
+        // For each data row (skip header)
+        $table.find('tr').each(function (rowIndex) {
+            if (rowIndex === 0) return; // header row
+
+            const $row = $(this);
+
+            // If this row already has a slider, just resync its visual state and skip creation.
+            const existingSync = $row.data('permToggleSync');
+            if (existingSync) {
+                existingSync();
+                return;
+            }
+
+            const $allowCb = $row.find('input[ptype="allow"]');
+            const $denyCb  = $row.find('input[ptype="deny"]');
+
+            if (!$allowCb.length || !$denyCb.length) return;
+
+            const $allowCell = $allowCb.closest('td');
+            const $denyCell  = $denyCb.closest('td');
+
+            const permName =
+                $allowCb.attr('permission') || $denyCb.attr('permission') || '';
+
+            // New slider UI
+            const $toggle = $(`
+                <div class="perm-toggle perm-toggle--none" data-permission="${permName}">
+                    <span class="perm-toggle-segment perm-toggle-segment-deny">Deny</span>
+                    <span class="perm-toggle-segment perm-toggle-segment-allow">Allow</span>
+                </div>
+            `);
+
+            const $toggleCell = $('<td class="perm-toggle-cell" colspan="2"></td>');
+            $toggleCell.append($toggle);
+
+            // Move the existing checkboxes into the toggle (keep all handlers & IDs)
+            $toggle.append($denyCb).append($allowCb);
+
+            // Replace the old Allow/Deny cells with a single toggle cell
+            $allowCell.after($toggleCell);
+            $allowCell.remove();
+            $denyCell.remove();
+
+            // Keep slider visual state in sync with underlying checkboxes
+            const syncToggleState = function () {
+                const allowOn = $allowCb.prop('checked');
+                const denyOn  = $denyCb.prop('checked');
+
+                $toggle.removeClass('perm-toggle--allow perm-toggle--deny perm-toggle--none');
+
+                if (allowOn && !denyOn) {
+                    $toggle.addClass('perm-toggle--allow');
+                } else if (denyOn && !allowOn) {
+                    $toggle.addClass('perm-toggle--deny');
+                } else {
+                    // both or neither -> neutral UI (your model still interprets as deny)
+                    $toggle.addClass('perm-toggle--none');
+                }
+            };
+
+            // Store sync function so later calls to init_permission_sliders can resync this row
+            $row.data('permToggleSync', syncToggleState);
+
+            // Initial sync from whatever the checkboxes currently say
+            syncToggleState();
+
+            // If other code changes the checkboxes, keep the slider updated
+            $allowCb.on('change', syncToggleState);
+            $denyCb.on('change', syncToggleState);
+
+            // Clicking Deny segment updates checkboxes + fires existing handlers
+            $toggle.on('click', '.perm-toggle-segment-deny', function (e) {
+                e.preventDefault();
+                const newDeny = !$denyCb.prop('checked');
+                $denyCb.prop('checked', newDeny).trigger('change');
+                $allowCb.prop('checked', false).trigger('change');
+            });
+
+            // Clicking Allow segment updates checkboxes + fires existing handlers
+            $toggle.on('click', '.perm-toggle-segment-allow', function (e) {
+                e.preventDefault();
+                const newAllow = !$allowCb.prop('checked');
+                $allowCb.prop('checked', newAllow).trigger('change');
+                $denyCb.prop('checked', false).trigger('change');
+            });
+        });
+    });
+}
+
+// Run once on ready, and again whenever the UI under #html-loc changes
+$(function () {
+    init_permission_sliders();
+
+    const target = document.getElementById('html-loc') || document.body;
+    const observer = new MutationObserver(function () {
+        init_permission_sliders();
+    });
+
+    observer.observe(target, { childList: true, subtree: true });
+});
