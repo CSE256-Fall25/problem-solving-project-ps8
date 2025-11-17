@@ -107,3 +107,13 @@
 .perm-toggle input[ptype="deny"] {
     display: none;
 }
+
+.inherited-permission-row {
+    background-color: #f0f0f0;
+    font-style: italic;
+}
+
+.inherited-permission-row::after {
+    content: " 🔒";
+    color: #999;
+}

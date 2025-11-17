@@ -177,6 +177,18 @@ perm_remove_user_button.click(function () {
     }
 })
 
+perm_undo_button = $('<button id="perm_undo_button" class="ui-button ui-widget ui-corner-all" disabled>Undo</button>')
+perm_undo_button.click(function () {
+    if(undoLastPermissionChange()) {
+        console.log('Undid last permission change');
+        // Force refresh of the UI
+        let currentFilepath = perm_dialog.attr('filepath');
+        if(currentFilepath) {
+            perm_dialog.attr('filepath', currentFilepath); // This triggers the observer to reload everything
+        }
+    }
+})
+
 // eliana's code
 $('<style>')
     .prop('type', 'text/css')
@@ -221,6 +233,9 @@ perm_dialog.append(file_permission_users)
 perm_dialog.append(perm_add_user_select)
 
 perm_add_user_select.append(perm_remove_user_button) // Cheating a bit again - add the remove button the the 'add user select' div, just so it shows up on the same line.
+
+perm_add_user_select.append(perm_undo_button) // Add undo button on same line
+
 
 //eliana
 perm_add_user_select.css('margin-bottom', '30px')

@@ -3,10 +3,12 @@
 let effective_permissions = define_new_effective_permissions("effect_panel", add_info_col = true, which_permissions = null);
 $('#sidepanel').append(effective_permissions);
 
-const $userSelect = define_new_user_select_field('user_select', 'Select User', function(selected_user) {
+const $userSelect = define_new_user_select_field('user_select', 'Select User to View Permissions Settings', function(selected_user) {
   $('#effect_panel').attr('username', selected_user);
 });
 $('#sidepanel').append($userSelect);
+
+
 
 
 $('#effect_panel').attr('filepath', '/C/presentation_documents/important_file.txt');

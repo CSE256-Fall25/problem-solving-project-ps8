@@ -4,6 +4,7 @@
 
 emitter = new EventTarget()
 
+
 // -- pseudo-enum of permission types -- 
 // see also "List of possible permission" table at  https://espace.cern.ch/winservices-help/NICESecurityAndAntivirus/NICESecurityHowTo/Pages/ManagingACLSettingPermssion.aspx 
 permissions = {
