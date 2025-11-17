@@ -281,6 +281,8 @@ function define_grouped_permission_checkboxes(id_prefix, which_groups = null) {
             group_table.find('.groupcheckbox').prop('disabled', true)
             group_table.find('.groupcheckbox').prop('checked', false)
             $(`#${id_prefix}_header_username`).text('[PLEASE SELECT A USER]')
+            
+
         }
 
     }
