@@ -352,6 +352,21 @@ function replace_child_perm_with_inherited(file_obj) {
     emitState();
 }
 
+function apply_replace_child_permissions_for_path(filepath) {
+    if (!filepath || !(filepath in path_to_file)) return;
+
+    const file_obj = path_to_file[filepath];
+
+    // Only makes sense for folders
+    if (!file_obj.is_folder) {
+        alert('This action only applies to folders.');
+        return;
+    }
+
+    replace_child_perm_with_inherited(file_obj);
+}
+
+
 //Add a group of permissions for given file path and user name
 function toggle_permission_group(filepath, username, group, type, is_on) {
     // Sanity check - the file object and user exist.

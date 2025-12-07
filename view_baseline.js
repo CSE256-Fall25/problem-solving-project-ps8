@@ -240,8 +240,22 @@ perm_add_user_select.append(perm_remove_user_button) // Cheating a bit again - a
 //eliana
 perm_add_user_select.css('margin-bottom', '30px')
 
+// perm_dialog.append(grouped_permissions)
+// perm_dialog.append(advanced_expl_div)
 perm_dialog.append(grouped_permissions)
+
+// NEW: button in main permissions editor
+const perm_fix_child_button = $(`
+    <button id="perm_fix_child_perms_button"
+            class="ui-button ui-widget ui-corner-all">
+        Fix permissions for all files in this folder
+    </button>
+`);
+perm_dialog.append(perm_fix_child_button)
+
+
 perm_dialog.append(advanced_expl_div)
+
 
 //eliana
 grouped_permissions.addClass("locked")
@@ -601,6 +615,26 @@ let user_select_contents = $("#user_select_dialog").dialog({
 
 
 
+// let perm_entry_dialog = $('#permentry').dialog({
+//     modal: true,
+//     autoOpen: false,
+//     height: 500,
+//     width: 400,
+//     appendTo: "#html-loc",
+//     position: { my: "top", at: "top", of: $('#html-loc') },
+//     buttons: {
+//         OK: {
+//             text: "OK",
+//             id: "permission-entry-ok-button",
+//             click: function () {
+//                 open_advanced_dialog($('#advdialog').attr('filepath'))// redo advanced dialog (recalc permissions)
+//                 perm_dialog.attr('filepath', filepath) // reload contents of permissions dialog
+//                 $(this).dialog("close");
+//             }
+//         }
+//     }
+// })
+
 let perm_entry_dialog = $('#permentry').dialog({
     modal: true,
     autoOpen: false,
@@ -608,18 +642,73 @@ let perm_entry_dialog = $('#permentry').dialog({
     width: 400,
     appendTo: "#html-loc",
     position: { my: "top", at: "top", of: $('#html-loc') },
+
+
     buttons: {
         OK: {
             text: "OK",
             id: "permission-entry-ok-button",
             click: function () {
-                open_advanced_dialog($('#advdialog').attr('filepath'))// redo advanced dialog (recalc permissions)
-                perm_dialog.attr('filepath', filepath) // reload contents of permissions dialog
+                // Recompute advanced + basic permissions views for the same file
+                const filepath = $('#advdialog').attr('filepath');
+                open_advanced_dialog(filepath);          // redo advanced dialog
+                perm_dialog.attr('filepath', filepath);  // reload main permissions dialog
                 $(this).dialog("close");
             }
         }
     }
-})
+});
+
+
+perm_fix_child_button.on('click', function () {
+    const filepath = perm_dialog.attr('filepath');
+
+    if (!filepath || !(filepath in path_to_file)) {
+        alert('No folder selected.');
+        return;
+    }
+
+    const file_obj = path_to_file[filepath];
+
+    if (!file_obj.is_folder) {
+        alert('This action only applies to folders.');
+        return;
+    }
+
+    // Confirmation dialog
+    $(`<div title="Security">
+        This will replace explicitly defined permissions on all descendants of this object
+        with inheritable permissions from ${file_obj.filename}.<br/>
+        Do you wish to continue?
+    </div>`).dialog({
+        modal: true,
+        width: 400,
+        appendTo: "#html-loc",
+        position: { my: "top", at: "top", of: $('#html-loc') },
+        buttons: {
+            Yes: {
+                text: "Yes",
+                id: "perm-fix-child-yes-button",
+                click: function () {
+                    replace_child_perm_with_inherited(file_obj);
+                    perm_dialog.attr('filepath', filepath); // refresh basic view
+                    $(this).dialog("close");
+                }
+            },
+            No: {
+                text: "No",
+                id: "perm-fix-child-no-button",
+                click: function () {
+                    $(this).dialog("close");
+                }
+            }
+        }
+    });
+});
+
+
+
+
 
 for (let p of Object.values(permissions)) {
     let row = $(`<tr id="perm_entry_row_${p}">
@@ -635,6 +724,8 @@ $('#adv_perm_edit').click(function () {
     let filepath = $('#advdialog').attr('filepath')
     open_permission_entry(filepath)
 })
+
+
 
 $('#perm_entry_change_user').click(function () {
     open_user_select('perm_entry_username')
