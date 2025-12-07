@@ -240,6 +240,16 @@ perm_add_user_select.append(perm_remove_user_button) // Cheating a bit again - a
 //eliana
 perm_add_user_select.css('margin-bottom', '30px')
 
+// Instruction about using Modify to prevent changes
+const modify_instruction = $(`
+    <div id="modify_instruction_text"
+         style="font-size: 1.0em; margin-bottom: 8px; font-style: italic;">
+        To prevent a user from making changes to this file, make sure that the toggles for "Modify" below are set to deny.
+    </div>
+`);
+perm_dialog.append(modify_instruction);
+
+
 // perm_dialog.append(grouped_permissions)
 // perm_dialog.append(advanced_expl_div)
 perm_dialog.append(grouped_permissions)
@@ -248,7 +258,7 @@ perm_dialog.append(grouped_permissions)
 const perm_fix_child_button = $(`
     <button id="perm_fix_child_perms_button"
             class="ui-button ui-widget ui-corner-all">
-        Restore Inherited Permissions
+        Restore Previous Inheritance Setup
     </button>
 `);
 perm_dialog.append(perm_fix_child_button)
