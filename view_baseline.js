@@ -248,7 +248,7 @@ perm_dialog.append(grouped_permissions)
 const perm_fix_child_button = $(`
     <button id="perm_fix_child_perms_button"
             class="ui-button ui-widget ui-corner-all">
-        Fix permissions for all files in this folder
+        Restore Inherited Permissions
     </button>
 `);
 perm_dialog.append(perm_fix_child_button)
