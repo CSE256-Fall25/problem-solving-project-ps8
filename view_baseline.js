@@ -286,7 +286,22 @@ define_attribute_observer(perm_dialog, 'filepath', function () {
     grouped_permissions.attr('username', '') // since we are reloading the user list, reset the username in permission checkboxes
     //replace previous user list with the one we just generated:
     file_permission_users.empty()
-    file_permission_users.append(file_user_list)
+    
+    // If there are no users, show a message instead of an empty list
+    if (file_user_list.length === 0 || Object.keys(file_users).length === 0) {
+        let no_users_message = $('<div style="font-style: italic; color: #666; padding: 10px; text-align: center;">No permissions set, add users below.</div>')
+        file_permission_users.append(no_users_message)
+    } else {
+        file_permission_users.append(file_user_list)
+    }
+
+    // If there are no users, show a message instead of an empty list
+    if (file_user_list.length === 0 || Object.keys(file_users).length === 0) {
+        let no_users_message = $('<div style="font-style: italic; color: #666; padding: 10px; text-align: center;">No permissions set, add users below.</div>')
+        file_permission_users.append(no_users_message)
+    } else {
+        file_permission_users.append(file_user_list)
+    }
 
     //eliana's code
     file_permission_users.attr('selected_item', null)
