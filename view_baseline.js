@@ -258,7 +258,7 @@ perm_dialog.append(grouped_permissions)
 const perm_fix_child_button = $(`
     <button id="perm_fix_child_perms_button"
             class="ui-button ui-widget ui-corner-all">
-        Restore Previous Inheritance Setup
+        Apply Inheritance to Child Permissions
     </button>
 `);
 perm_dialog.append(perm_fix_child_button)
